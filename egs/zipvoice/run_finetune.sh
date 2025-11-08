@@ -18,12 +18,12 @@ stop_stage=6
 nj=20
 
 # Whether the language of training data is one of Chinese and English
-is_zh_en=1
+is_zh_en=0
 
 # Language identifier, used when language is not Chinese or English
 # see https://github.com/rhasspy/espeak-ng/blob/master/docs/languages.md
 # Example of French: lang=fr
-lang=default
+lang=vi
 
 if [ $is_zh_en -eq 1 ]; then
       tokenizer=emilia
@@ -100,6 +100,7 @@ if [ $stage -le 3 ] && [ $stop_stage -ge 3 ]; then
                   --dest-dir data/fbank \
                   --dataset custom-finetune \
                   --subset ${subset} \
+                  --sampling-rate 16000 \
                   --num-jobs ${nj}
       done
 fi
