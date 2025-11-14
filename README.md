@@ -118,10 +118,10 @@ pip install -r requirements.txt
 
 **k2 is necessary for training** and can speed up inference. Nevertheless, you can still use the inference mode of ZipVoice without installing k2.
 
-> **Note:**  Make sure to install the k2 version that matches your PyTorch and CUDA version. For example, if you are using pytorch 2.5.1 and CUDA 12.1, you can install k2 as follows:
+> **Note:**  Make sure to install the k2 version that matches your PyTorch and CUDA version. For example, if you are using pytorch 2.9.0 and CUDA 12.8, you can install k2 as follows:
 
 ```bash
-pip install k2==1.24.4.dev20250208+cuda12.1.torch2.5.1 -f https://k2-fsa.github.io/k2/cuda.html
+pip install k2==1.24.4.dev20251030+cuda12.8.torch2.9.0 -f https://k2-fsa.github.io/k2/cuda.html
 ```
 
 Please refer to https://k2-fsa.org/get-started/k2/ for details.
