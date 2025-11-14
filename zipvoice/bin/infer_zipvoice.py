@@ -98,7 +98,7 @@ from zipvoice.utils.infer import (
 )
 from zipvoice.utils.tensorrt import load_trt
 
-HUGGINGFACE_REPO = "k2-fsa/ZipVoice"
+HUGGINGFACE_REPO = "hynt/ZipVoice-Vietnamese-2500h"
 MODEL_DIR = {
     "zipvoice": "zipvoice",
     "zipvoice_distill": "zipvoice_distill",
@@ -432,6 +432,42 @@ def generate_sentence_raw_evaluation(
     torchaudio.save(save_path, wav.cpu(), sample_rate=sampling_rate)
 
     return metrics
+
+def hf_try_download(
+    repo_id: str,
+    candidates: list[str],
+    revision: Optional[str] = None,
+) -> str:
+    """
+    Try to download a file from HuggingFace Hub using a list of candidate filenames.
+
+    Args:
+        repo_id (str): The ID of the repository.
+        candidates (list[str]): A list of candidate filenames to try.
+        revision (Optional[str]): The revision (branch, tag, or commit hash) to use.
+
+    Returns:
+        str: The path to the successfully downloaded file.
+
+    Raises:
+        FileNotFoundError: If none of the candidates can be downloaded.
+    """
+    for filename in candidates:
+        try:
+            path = hf_hub_download(
+                repo_id=repo_id, filename=filename, revision=revision
+            )
+            logging.info(f"Successfully downloaded {filename} from {repo_id}")
+            return path
+        except Exception as e:
+            logging.debug(
+                f"Failed to download {filename} from {repo_id}. Error: {e}"
+            )
+
+    raise FileNotFoundError(
+        f"Could not find any of the candidate files in {repo_id}. "
+        f"Attempted candidates: {candidates}"
+    )
 
 
 def generate_sentence(
@@ -770,15 +806,47 @@ def main():
         )
     else:
         logging.info(f"Using pretrained {params.model_name} model from the Huggingface")
-        model_ckpt = hf_hub_download(
-            HUGGINGFACE_REPO, filename=f"{MODEL_DIR[params.model_name]}/model.pt"
+        # 1. Determine checkpoint candidates
+        model_dir = MODEL_DIR[params.model_name]
+        ckpt_candidates = []
+        if params.checkpoint_name != "model.pt":
+            # If user provided a custom checkpoint name, try it first in both locations
+            ckpt_candidates.append(params.checkpoint_name)
+            ckpt_candidates.append(f"{model_dir}/{params.checkpoint_name}")
+
+        # Add default fallbacks for both original and fine-tuned repos
+        ckpt_candidates.extend([
+            f"{model_dir}/model.pt",
+            "model.pt",
+            "iter-525000-avg-2.pt",
+            f"{model_dir}/model.safetensors",
+            "model.safetensors",
+        ])
+
+        # Remove duplicates while preserving order
+        ckpt_candidates = list(dict.fromkeys(ckpt_candidates))
+
+        model_ckpt = hf_try_download(
+            HUGGINGFACE_REPO, candidates=ckpt_candidates
         )
-        model_config = hf_hub_download(
-            HUGGINGFACE_REPO, filename=f"{MODEL_DIR[params.model_name]}/model.json"
+        # 2. Determine config candidates
+        config_candidates = [
+            f"{model_dir}/model.json",
+            f"{model_dir}/config.json",
+            "model.json",
+            "config.json",
+        ]
+        model_config = hf_try_download(
+            HUGGINGFACE_REPO, candidates=config_candidates
         )
 
-        token_file = hf_hub_download(
-            HUGGINGFACE_REPO, filename=f"{MODEL_DIR[params.model_name]}/tokens.txt"
+        # 3. Determine tokens candidates
+        token_candidates = [
+            f"{model_dir}/tokens.txt",
+            "tokens.txt",
+        ]
+        token_file = hf_try_download(
+            HUGGINGFACE_REPO, candidates=token_candidates
         )
 
     if params.tokenizer == "emilia":
